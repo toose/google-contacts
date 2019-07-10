@@ -1,4 +1,3 @@
-venv/
 credentials.json
 token.json
 .idea/*
