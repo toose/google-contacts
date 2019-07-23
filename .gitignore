@@ -1,3 +1,13 @@
+# Credentials file
 credentials.json
-token.json
-.idea/*
+
+# Token authentication file
+*/token.pickle
+
+# Idea folders
+*/.idea/*
+
+# Build/dist folders
+*/build/*
+*/dist/*
+*/__init__.spec

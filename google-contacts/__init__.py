@@ -1,11 +1,12 @@
 #!/usr/sbin/env python3
-"""Add/Edit/Remove contacts from Google Contacts"""
+"""Add contacts to Google Contacts"""
 
 #from __future__ import print_function
 from __future__ import print_function
 import pickle
 import os.path
 import tkinter as tk
+from tkinter import messagebox
 import logging
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -29,23 +30,10 @@ class GoogleContactGUI:
         self.credentials = 'credentials.json'
         self.service = self._authenticate(self.credentials)
         self.container = tk.Frame
-        self.logger = logging.getLogger('contactGUI')
-
-        # Layout
         self.entries = []
-        for field in self.fields:
-            self.row = tk.Frame(self.master)
-            self.label = tk.Label(self.row, width=15, text=field, anchor='w')
-            self.entry = tk.Entry(self.row)
-            self.row.pack(side=tk.TOP, fill=tk.X, padx=5, pady=5)
-            self.label.pack(side=tk.LEFT)
-            self.entry.pack(side=tk.RIGHT, expand=tk.YES, fill=tk.X)
-            self.entries.append((field, self.entry))
-        self.create_button = tk.Button(self.master, text='Create Contact',
-            command=(lambda s=self.service, e=self.entries: self._create_contact(s, e)))
-        self.create_button.pack(side=tk.LEFT, padx=5, pady=5)
-        self.quit_button = tk.Button(self.master, text='Quit', command=self.master.quit)
-        self.quit_button.pack(side=tk.LEFT, padx=40)
+        self.logger = logging.getLogger('contactGUI')
+        # Layout/Create form
+        self.entries = self._create_form()
 
     def _authenticate(self, cred_file):
         """Authenticate against Google Contact API"""
@@ -65,11 +53,52 @@ class GoogleContactGUI:
         service = build('people', 'v1', credentials=creds, cache_discovery=False)
         return service
 
+    def _create_form(self):
+        for field in self.fields:
+            self.row = tk.Frame(self.master)
+            self.label = tk.Label(self.row, width=15, text=field, anchor='w')
+            self.entry = tk.Entry(self.row)
+            #if field == 'First Name':
+                #self.entry.icursor(0) # Mark default cursor location
+            self.row.pack(side=tk.TOP, fill=tk.X, padx=5, pady=5)
+            self.label.pack(side=tk.LEFT)
+            self.entry.pack(side=tk.RIGHT, expand=tk.YES, fill=tk.X)
+            self.entries.append((field, self.entry))
+        self.create_button = tk.Button(self.master, text='Create Contact',
+            command=(lambda s=self.service, e=self.entries: self._create_contact(s, e)))
+        self.create_button.pack(side=tk.LEFT, padx=5, pady=5)
+        self.quit_button = tk.Button(self.master, text='Quit', command=self.master.quit)
+        self.quit_button.pack(side=tk.LEFT, padx=40)
+        return self.entries
+        
+    def _clear_form(self, entries):
+        """Clears the form after successful upload"""
+        for _, entry in entries:
+            entry.delete(0, tk.END)
+
     def _create_contact(self, service, entries):
-        contact_body = self._fill_form(entries)
-        contact = service.people().createContact(body=contact_body)
-        contact.execute()
-        logging.info('Contact created successfully')
+        """Validates input and creates the contact the contact"""
+        try:
+            if self.is_valid(entries):
+                contact_body = self._fill_form(entries)
+                contact = service.people().createContact(body=contact_body)
+                contact.execute()
+                messagebox.showinfo('Success', 'Contact created!')
+                self._clear_form(entries)
+                logging.info('Contact created successfully')
+        except:
+            messagebox.showinfo('Failed', 'Contact could not be created.')
+
+    def _is_valid(self, entries):
+        import re
+        for key, value in entries:
+            if key == 'Email Address':
+                #re_email = re.compile("")
+            elif key == 'Business Phone':
+                bus_phone  re.compile(r"^\d+$")
+                if not bus_phone.match(value):
+                    messagebox.showinfo('Error', '')
+                else:
 
     def _fill_form(self, entries):
         """Fills in the contact body with info from Tkinter fields"""
