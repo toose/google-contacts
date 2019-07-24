@@ -11,3 +11,6 @@ credentials.json
 */build/*
 */dist/*
 */__init__.spec
+
+# PyInstaller spec file
+*/*.spec

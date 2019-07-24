@@ -24,7 +24,7 @@ class GoogleContactGUI(tk.Frame):
 
     def __init__(self, master):
         tk.Frame.__init__(self, master)
-        self.master.title("Google Contacts API v0.3")
+        self.master.title("Google Contacts API v0.8")
         # If modifying these scopes, delete the file token.json.
         self.scopes = ['https://www.googleapis.com/auth/contacts']
         self.credentials = 'credentials.json'
@@ -51,12 +51,22 @@ class GoogleContactGUI(tk.Frame):
             with open('token.pickle', 'wb') as token:
                 pickle.dump(creds, token)
         service = build('people', 'v1', credentials=creds, cache_discovery=False)
+        logging.info("Successfully connected to Google API service.")
         return service
 
+    def _callback(self, event, entries):
+        """Changes focus to first entry item"""
+        entries[0][1].focus()
+
+    def _clear_form(self, entries):
+        """Clears the form after successful upload"""
+        for _, entry in entries:
+            entry.delete(0, tk.END)
+
     def _create_form(self):
-        
+        """Creates the TK form"""
         for field in self.fields:
-            vcmd = (self.register(self._on_validate), '%d', '%i', '%P', '%s', '%S', '%v', '%V', '%W', field)
+            vcmd = (self.register(self._on_validate), '%S', field)
             self.row = tk.Frame(self.master)
             self.label = tk.Label(self.row, width=15, text=field, anchor='w')
             self.entry = tk.Entry(self.row, validate='key', validatecommand=vcmd)
@@ -68,42 +78,23 @@ class GoogleContactGUI(tk.Frame):
         self.create_button = tk.Button(self.master, text='Create Contact',
             command=(lambda s=self.service, e=self.entries: self._create_contact(s, e)))
         self.create_button.pack(side=tk.LEFT, padx=5, pady=5)
+        self.create_button.bind("<ButtonRelease-1>",  lambda v=None, e=self.entries,: self._callback(v, e))
         self.quit_button = tk.Button(self.master, text='Quit', command=self.master.quit)
         self.quit_button.pack(side=tk.LEFT, padx=40)
+        logging
         return self.entries
-
-    def _on_validate(self, d, i, P, s, S, v, V, W, field):
-        """Validates entries"""
-        self.text.delete("1.0", "end")
-        self.text.insert("end","OnValidate:\n")
-        self.text.insert("end","P='%s'\n" % P)
-        self.text.insert("end","S='%s'\n" % S)
-        
-        # Disallow anything but numbers for phone fields
-        
-        if re.match(r"\w+\sPhone", field):
-            if S.isdigit():
-                return True
-            else:
-                return False
-        
-    def _clear_form(self, entries):
-        """Clears the form after successful upload"""
-        for _, entry in entries:
-            entry.delete(0, tk.END)
 
     def _create_contact(self, service, entries):
         """Validates input and creates the contact the contact"""
         try:
-            if self.is_valid(entries):
-                contact_body = self._fill_form(entries)
-                contact = service.people().createContact(body=contact_body)
-                contact.execute()
-                messagebox.showinfo('Success', 'Contact created!')
-                self._clear_form(entries)
-                logging.info('Contact created successfully')
+            contact_body = self._fill_form(entries)
+            contact = service.people().createContact(body=contact_body)
+            contact.execute()
+            messagebox.showinfo('Success', 'Contact created!')
+            self._clear_form(entries)
+            logging.info('Contact created successfully')
         except:
-            messagebox.showinfo('Failed', 'Contact could not be created.')
+            messagebox.showinfo('Failed', 'Contact could not be created.')        
 
     def _fill_form(self, entries):
         """Fills in the contact body with info from Tkinter fields"""
@@ -141,6 +132,21 @@ class GoogleContactGUI(tk.Frame):
                     contact_body['phoneNumbers'][count]['type'] = 'home'
                     count += 1
         return contact_body
+
+    def _on_validate(self, S, field):
+        """Validates entries"""
+        self.text.delete("1.0", "end")
+        self.text.insert("end","OnValidate:\n")
+        self.text.insert("end","S='%s'\n" % S)
+        
+        # Disallow anything but numbers for phone fields
+        if re.match(r"\w+\sPhone", field):
+            if S.isdigit():
+                return True
+            else:
+                return False
+        else:
+            return True        
 
 
 if __name__ == '__main__':
