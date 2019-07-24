@@ -11,19 +11,19 @@ import logging
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
-#from httplib2 import Http
+import re
 
 # Logging format
 logging.basicConfig(level=logging.DEBUG, format=' %(asctime)s - %(levelname)s - %(message)s')
 
-class GoogleContactGUI:
+class GoogleContactGUI(tk.Frame):
     fields = [
         'First Name', 'Last Name', 'Company', 'Email Address', 'Business Phone',
         'Mobile Phone', 'Home Phone'
     ]
 
     def __init__(self, master):
-        self.master = master
+        tk.Frame.__init__(self, master)
         self.master.title("Google Contacts API v0.3")
         # If modifying these scopes, delete the file token.json.
         self.scopes = ['https://www.googleapis.com/auth/contacts']
@@ -54,12 +54,13 @@ class GoogleContactGUI:
         return service
 
     def _create_form(self):
+        
         for field in self.fields:
+            vcmd = (self.register(self._on_validate), '%d', '%i', '%P', '%s', '%S', '%v', '%V', '%W', field)
             self.row = tk.Frame(self.master)
             self.label = tk.Label(self.row, width=15, text=field, anchor='w')
-            self.entry = tk.Entry(self.row)
-            #if field == 'First Name':
-                #self.entry.icursor(0) # Mark default cursor location
+            self.entry = tk.Entry(self.row, validate='key', validatecommand=vcmd)
+            self.text = tk.Text(self, height=10, width=89)
             self.row.pack(side=tk.TOP, fill=tk.X, padx=5, pady=5)
             self.label.pack(side=tk.LEFT)
             self.entry.pack(side=tk.RIGHT, expand=tk.YES, fill=tk.X)
@@ -70,6 +71,21 @@ class GoogleContactGUI:
         self.quit_button = tk.Button(self.master, text='Quit', command=self.master.quit)
         self.quit_button.pack(side=tk.LEFT, padx=40)
         return self.entries
+
+    def _on_validate(self, d, i, P, s, S, v, V, W, field):
+        """Validates entries"""
+        self.text.delete("1.0", "end")
+        self.text.insert("end","OnValidate:\n")
+        self.text.insert("end","P='%s'\n" % P)
+        self.text.insert("end","S='%s'\n" % S)
+        
+        # Disallow anything but numbers for phone fields
+        
+        if re.match(r"\w+\sPhone", field):
+            if S.isdigit():
+                return True
+            else:
+                return False
         
     def _clear_form(self, entries):
         """Clears the form after successful upload"""
@@ -88,17 +104,6 @@ class GoogleContactGUI:
                 logging.info('Contact created successfully')
         except:
             messagebox.showinfo('Failed', 'Contact could not be created.')
-
-    def _is_valid(self, entries):
-        import re
-        for key, value in entries:
-            if key == 'Email Address':
-                #re_email = re.compile("")
-            elif key == 'Business Phone':
-                bus_phone  re.compile(r"^\d+$")
-                if not bus_phone.match(value):
-                    messagebox.showinfo('Error', '')
-                else:
 
     def _fill_form(self, entries):
         """Fills in the contact body with info from Tkinter fields"""
